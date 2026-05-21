@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowPay — Operations Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: rgba(255,255,255,0.07);
+    --accent: #00e5a0;
+    --accent2: #7c6aff;
+    --accent3: #ff5c5c;
+    --accent4: #ffc93c;
+    --text: #f0f0f8;
+    --muted: #6b6b80;
+    --muted2: #3a3a50;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    z-index: 10;
+    padding: 24px 0;
+  }
+  .logo {
+    padding: 0 24px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo-name span { color: var(--accent); }
+  .logo-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+  .nav { margin-top: 24px; flex: 1; }
+  .nav-section {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 0 24px 10px;
+    text-transform: uppercase;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 24px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    position: relative;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,229,160,0.05);
+  }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--accent3);
+    color: #fff;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 1px 6px;
+    border-radius: 20px;
+  }
+  .sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+  }
+  .user-info {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .user-name { font-size: 13px; font-weight: 500; }
+  .user-role { font-size: 11px; color: var(--muted); }
+
+  /* MAIN */
+  .main {
+    margin-left: 220px;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    position: sticky; top: 0;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 5;
+  }
+  .page-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .period-selector {
+    display: flex; gap: 4px;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .period-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    border: none; background: none;
+    transition: all 0.15s;
+  }
+  .period-btn.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+  .alert-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    position: relative;
+  }
+  .alert-dot {
+    position: absolute; top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--accent3);
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+  }
+
+  /* CONTENT */
+  .content { padding: 32px; }
+
+  /* HERO METRICS */
+  .hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .metric-card.green::before { background: linear-gradient(90deg, var(--accent), transparent); }
+  .metric-card.purple::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .metric-card.red::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .metric-card.yellow::before { background: linear-gradient(90deg, var(--accent4), transparent); }
+  .metric-card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); }
+  .metric-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .metric-label .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .green .dot { background: var(--accent); }
+  .purple .dot { background: var(--accent2); }
+  .red .dot { background: var(--accent3); }
+  .yellow .dot { background: var(--accent4); }
+  .metric-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .metric-change {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .up { color: var(--accent); }
+  .down { color: var(--accent3); }
+  .metric-sub { color: var(--muted); font-size: 11px; }
+  .metric-sparkline {
+    position: absolute; bottom: 16px; right: 16px;
+    opacity: 0.3;
+  }
+
+  /* GRID LAYOUT */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .grid-equal {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .card-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .badge-green { background: rgba(0,229,160,0.12); color: var(--accent); border: 1px solid rgba(0,229,160,0.2); }
+  .badge-purple { background: rgba(124,106,255,0.12); color: var(--accent2); border: 1px solid rgba(124,106,255,0.2); }
+  .badge-red { background: rgba(255,92,92,0.12); color: var(--accent3); border: 1px solid rgba(255,92,92,0.2); }
+  .badge-yellow { background: rgba(255,201,60,0.12); color: var(--accent4); border: 1px solid rgba(255,201,60,0.2); }
+
+  canvas { width: 100% !important; }
+
+  /* COHORT TABLE */
+  .cohort-table { width: 100%; border-collapse: collapse; }
+  .cohort-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 8px 10px;
+    text-align: center;
+    font-weight: 400;
+  }
+  .cohort-table td {
+    padding: 6px 8px;
+    text-align: center;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .cohort-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: left !important;
+    padding-right: 16px !important;
+    white-space: nowrap;
+  }
+
+  /* FUNNEL */
+  .funnel-item {
+    margin-bottom: 12px;
+  }
+  .funnel-label-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .funnel-label { font-size: 13px; font-weight: 500; }
+  .funnel-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .funnel-bar-bg {
+    height: 8px;
+    background: var(--muted2);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .funnel-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* TRANSACTIONS */
+  .tx-list { display: flex; flex-direction: column; gap: 10px; }
+  .tx-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .tx-item:hover { border-color: rgba(255,255,255,0.15); }
+  .tx-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .tx-info { flex: 1; }
+  .tx-name { font-size: 13px; font-weight: 500; }
+  .tx-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .tx-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .tx-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  /* LTV/CAC */
+  .ltv-cac {
+    display: flex; gap: 16px;
+    margin-bottom: 20px;
+  }
+  .ltv-cac-item {
+    flex: 1;
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .ltv-cac-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .ltv-cac-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .ratio-bar-container {
+    margin-top: 16px;
+  }
+  .ratio-label {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .ratio-bar {
+    height: 10px;
+    background: var(--muted2);
+    border-radius: 99px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ratio-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .ratio-marker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* STORY ALERT */
+  .story-banner {
+    background: linear-gradient(135deg, rgba(124,106,255,0.15) 0%, rgba(0,229,160,0.08) 100%);
+    border: 1px solid rgba(124,106,255,0.3);
+    border-radius: 14px;
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .story-icon { font-size: 28px; }
+  .story-headline {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .story-text { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .story-cta {
+    margin-left: auto;
+    background: var(--accent);
+    color: #000;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .story-cta:hover { opacity: 0.85; }
+
+  /* ANIMATE IN */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .metric-card, .card, .story-banner {
+    animation: fadeUp 0.5s ease both;
+  }
+  .metric-card:nth-child(1) { animation-delay: 0.05s; }
+  .metric-card:nth-child(2) { animation-delay: 0.1s; }
+  .metric-card:nth-child(3) { animation-delay: 0.15s; }
+  .metric-card:nth-child(4) { animation-delay: 0.2s; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-name">Flow<span>Pay</span></div>
+    <div class="logo-tag">FINTECH · BRASIL</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active"><span class="nav-icon">◈</span> Operations</div>
+    <div class="nav-item"><span class="nav-icon">◎</span> Revenue</div>
+    <div class="nav-item"><span class="nav-icon">◇</span> Customers</div>
+    <div class="nav-section" style="margin-top:20px;">Growth</div>
+    <div class="nav-item"><span class="nav-icon">⟐</span> Cohorts</div>
+    <div class="nav-item"><span class="nav-icon">◉</span> Campaigns <span class="nav-badge">3</span></div>
+    <div class="nav-item"><span class="nav-icon">△</span> Forecasting</div>
+    <div class="nav-section" style="margin-top:20px;">Finance</div>
+    <div class="nav-item"><span class="nav-icon">⬡</span> Transactions</div>
+    <div class="nav-item"><span class="nav-icon">◫</span> Reports</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span> Settings</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">AV</div>
+      <div>
+        <div class="user-name">Ana Vieira</div>
+        <div class="user-role">Head of Growth</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">Operations Overview</div>
+    <div class="topbar-right">
+      <div class="period-selector">
+        <button class="period-btn">7D</button>
+        <button class="period-btn">30D</button>
+        <button class="period-btn active">90D</button>
+        <button class="period-btn">YTD</button>
+      </div>
+      <div class="alert-btn">🔔<div class="alert-dot"></div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- STORY BANNER -->
+    <div class="story-banner">
+      <div class="story-icon">🚀</div>
+      <div>
+        <div class="story-headline">Março foi o melhor mês da história da FlowPay</div>
+        <div class="story-text">Faturamento bateu R$4.8M (+38%) com churn em mínima histórica de 2.1%. LTV/CAC chegou a 8.4x — sinal claro de produto-market fit.</div>
+      </div>
+      <button class="story-cta">Ver análise completa →</button>
+    </div>
+
+    <!-- HERO METRICS -->
+    <div class="hero-metrics">
+      <div class="metric-card green">
+        <div class="metric-label"><span class="dot"></span>MRR</div>
+        <div class="metric-value">R$4.8M</div>
+        <div class="metric-change up">▲ +38.2% vs mês anterior</div>
+        <svg class="metric-sparkline" width="80" height="32" viewBox="0 0 80 32">
+          <polyline points="0,28 15,22 25,24 35,14 50,16 60,8 75,4" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="metric-card purple">
+        <div class="metric-label"><span class="dot"></span>Clientes Ativos</div>
+        <div class="metric-value">23.4K</div>
+        <div class="metric-change up">▲ +1.8K no período</div>
+        <svg class="metric-sparkline" width="80" height="32" viewBox="0 0 80 32">
+          <polyline points="0,28 12,24 25,20 38,15 50,11 62,8 75,5" fill="none" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="metric-card red">
+        <div class="metric-label"><span class="dot"></span>Churn Rate</div>
+        <div class="metric-value">2.1%</div>
+        <div class="metric-change up">▼ −0.4pp (melhoria)</div>
+        <svg class="metric-sparkline" width="80" height="32" viewBox="0 0 80 32">
+          <polyline points="0,6 15,8 25,10 38,12 50,18 62,22 75,26" fill="none" stroke="#ff5c5c" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="metric-card yellow">
+        <div class="metric-label"><span class="dot"></span>NPS</div>
+        <div class="metric-value">72</div>
+        <div class="metric-change up">▲ +5 pontos</div>
+        <svg class="metric-sparkline" width="80" height="32" viewBox="0 0 80 32">
+          <polyline points="0,24 15,22 25,18 38,20 50,14 62,10 75,6" fill="none" stroke="#ffc93c" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ROW 1: Revenue + Funnel -->
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Receita & Novos Clientes</div>
+            <div class="card-subtitle">Últimos 12 meses</div>
+          </div>
+          <span class="card-badge badge-green">+38% MoM</span>
+        </div>
+        <canvas id="revenueChart" height="200"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Funil de Conversão</div>
+            <div class="card-subtitle">Lead → Cliente ativo</div>
+          </div>
+          <span class="card-badge badge-purple">CV 8.3%</span>
+        </div>
+        <div style="margin-top: 8px;">
+          <div class="funnel-item">
+            <div class="funnel-label-row">
+              <span class="funnel-label">Leads capturados</span>
+              <span class="funnel-val">124.000</span>
+            </div>
+            <div class="funnel-bar-bg"><div class="funnel-bar" style="width:100%; background: #7c6aff;"></div></div>
+          </div>
+          <div class="funnel-item">
+            <div class="funnel-label-row">
+              <span class="funnel-label">Cadastro completo</span>
+              <span class="funnel-val">68.200 · 55%</span>
+            </div>
+            <div class="funnel-bar-bg"><div class="funnel-bar" style="width:55%; background: #6358e0;"></div></div>
+          </div>
+          <div class="funnel-item">
+            <div class="funnel-label-row">
+              <span class="funnel-label">Onboarding KYC</span>
+              <span class="funnel-val">38.400 · 31%</span>
+            </div>
+            <div class="funnel-bar-bg"><div class="funnel-bar" style="width:31%; background: #4e44c0;"></div></div>
+          </div>
+          <div class="funnel-item">
+            <div class="funnel-label-row">
+              <span class="funnel-label">1ª transação</span>
+              <span class="funnel-val">18.600 · 15%</span>
+            </div>
+            <div class="funnel-bar-bg"><div class="funnel-bar" style="width:15%; background: #3d35a0;"></div></div>
+          </div>
+          <div class="funnel-item">
+            <div class="funnel-label-row">
+              <span class="funnel-label">Cliente ativo (30d)</span>
+              <span class="funnel-val">10.300 · 8.3%</span>
+            </div>
+            <div class="funnel-bar-bg"><div class="funnel-bar" style="width:8.3%; background: var(--accent);"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: LTV/CAC + Churn + Retention -->
+    <div class="grid-equal">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">LTV / CAC</div>
+            <div class="card-subtitle">Unit economics</div>
+          </div>
+          <span class="card-badge badge-green">8.4x ratio</span>
+        </div>
+        <div class="ltv-cac">
+          <div class="ltv-cac-item">
+            <div class="ltv-cac-label">LTV</div>
+            <div class="ltv-cac-val" style="color:var(--accent)">R$2.520</div>
+          </div>
+          <div class="ltv-cac-item">
+            <div class="ltv-cac-label">CAC</div>
+            <div class="ltv-cac-val" style="color:var(--accent4)">R$300</div>
+          </div>
+          <div class="ltv-cac-item">
+            <div class="ltv-cac-label">Payback</div>
+            <div class="ltv-cac-val" style="color:var(--accent2)">4.2 mo</div>
+          </div>
+        </div>
+        <div class="ratio-bar-container">
+          <div class="ratio-label"><span>CAC</span><span>LTV</span></div>
+          <div class="ratio-bar">
+            <div class="ratio-fill" style="width:89%"></div>
+          </div>
+          <div class="ratio-marker">LTV/CAC = 8.4x ✦ Excelente (meta: >3x)</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Churn Breakdown</div>
+            <div class="card-subtitle">Motivos de cancelamento</div>
+          </div>
+          <span class="card-badge badge-red">2.1% churn</span>
+        </div>
+        <canvas id="churnChart" height="180"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Retenção 30/60/90d</div>
+            <div class="card-subtitle">Por canal de aquisição</div>
+          </div>
+        </div>
+        <canvas id="retentionChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- ROW 3: Cohort + Transactions -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Análise de Cohorts</div>
+            <div class="card-subtitle">Retenção mensal por coorte de aquisição</div>
+          </div>
+          <span class="card-badge badge-purple">Heatmap</span>
+        </div>
+        <div style="overflow-x: auto; margin-top: 4px;">
+          <table class="cohort-table" id="cohortTable"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Últimas Transações</div>
+            <div class="card-subtitle">Volume em tempo real</div>
+          </div>
+          <span class="card-badge badge-green">Live</span>
+        </div>
+        <div class="tx-list" id="txList"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ─── PERIOD BUTTONS ───────────────────────────────────
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ─── CHART DEFAULTS ───────────────────────────────────
+Chart.defaults.color = '#6b6b80';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+// ─── REVENUE CHART ────────────────────────────────────
+const months = ['Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez','Jan','Fev','Mar'];
+const revenue = [1.4, 1.6, 1.8, 2.1, 2.3, 2.5, 2.8, 3.0, 3.3, 3.6, 3.9, 4.8];
+const newClients = [800, 950, 1100, 1300, 1400, 1550, 1700, 1800, 2000, 2100, 2400, 2900];
+
+const revCtx = document.getElementById('revenueChart').getContext('2d');
+const gradient = revCtx.createLinearGradient(0, 0, 0, 300);
+gradient.addColorStop(0, 'rgba(0,229,160,0.25)');
+gradient.addColorStop(1, 'rgba(0,229,160,0)');
+
+new Chart(revCtx, {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        type: 'line',
+        label: 'MRR (R$M)',
+        data: revenue,
+        borderColor: '#00e5a0',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#00e5a0',
+        yAxisID: 'y',
+      },
+      {
+        type: 'bar',
+        label: 'Novos clientes',
+        data: newClients,
+        backgroundColor: 'rgba(124,106,255,0.25)',
+        borderColor: 'rgba(124,106,255,0.5)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y2',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        labels: { color: '#6b6b80', boxWidth: 12, padding: 16 }
+      },
+      tooltip: {
+        backgroundColor: '#18181f',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 12,
+        titleColor: '#f0f0f8',
+        bodyColor: '#6b6b80',
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, border: { display: false } },
+      y: {
+        position: 'left',
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { display: false },
+        ticks: { callback: v => 'R$'+v+'M' }
+      },
+      y2: {
+        position: 'right',
+        grid: { display: false },
+        border: { display: false },
+        ticks: { callback: v => v/1000+'K' }
+      }
+    }
+  }
+});
+
+// ─── CHURN DONUT ──────────────────────────────────────
+new Chart(document.getElementById('churnChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Preço', 'Suporte', 'Funcionalidade', 'Inativo', 'Outros'],
+    datasets: [{
+      data: [34, 22, 18, 16, 10],
+      backgroundColor: ['#ff5c5c','#ffc93c','#7c6aff','#00e5a0','#3a3a50'],
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '68%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: '#6b6b80', boxWidth: 10, padding: 12, font: { size: 11 } }
+      },
+      tooltip: {
+        backgroundColor: '#18181f',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` }
+      }
+    }
+  }
+});
+
+// ─── RETENTION CHART ──────────────────────────────────
+new Chart(document.getElementById('retentionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Orgânico', 'Referral', 'Paid', 'Social', 'App Store'],
+    datasets: [
+      { label: '30d', data: [78, 85, 62, 55, 70], backgroundColor: 'rgba(0,229,160,0.8)', borderRadius: 4, borderSkipped: false },
+      { label: '60d', data: [58, 71, 44, 38, 52], backgroundColor: 'rgba(0,229,160,0.45)', borderRadius: 4, borderSkipped: false },
+      { label: '90d', data: [42, 60, 30, 25, 38], backgroundColor: 'rgba(0,229,160,0.2)', borderRadius: 4, borderSkipped: false },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#6b6b80', boxWidth: 10, padding: 12, font: { size: 11 } } },
+      tooltip: {
+        backgroundColor: '#18181f',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, border: { display: false } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        border: { display: false },
+        ticks: { callback: v => v+'%' },
+        max: 100
+      }
+    }
+  }
+});
+
+// ─── COHORT TABLE ─────────────────────────────────────
+const cohortData = [
+  { label: 'Oct 24', data: [100, 68, 55, 48, 42, 38] },
+  { label: 'Nov 24', data: [100, 72, 58, 51, 45] },
+  { label: 'Dec 24', data: [100, 74, 61, 54] },
+  { label: 'Jan 25', data: [100, 75, 62] },
+  { label: 'Feb 25', data: [100, 77] },
+  { label: 'Mar 25', data: [100] },
+];
+
+function cohortColor(val) {
+  if (val === 100) return 'rgba(0,229,160,0.9)';
+  if (val >= 70) return 'rgba(0,229,160,0.65)';
+  if (val >= 55) return 'rgba(0,229,160,0.4)';
+  if (val >= 40) return 'rgba(255,201,60,0.4)';
+  if (val >= 25) return 'rgba(255,92,92,0.35)';
+  return 'rgba(255,92,92,0.2)';
+}
+function textColor(val) {
+  return val >= 55 ? '#000' : '#f0f0f8';
+}
+
+const thead = '<tr><th style="text-align:left">Coorte</th><th>M0</th><th>M1</th><th>M2</th><th>M3</th><th>M4</th><th>M5</th></tr>';
+let rows = '';
+cohortData.forEach(row => {
+  rows += '<tr>';
+  rows += `<td class="cohort-label">${row.label}</td>`;
+  for (let i = 0; i < 6; i++) {
+    if (i < row.data.length) {
+      const v = row.data[i];
+      rows += `<td style="background:${cohortColor(v)};color:${textColor(v)};border-radius:6px;font-weight:500;">${v}%</td>`;
+    } else {
+      rows += `<td style="color:#3a3a50;">–</td>`;
+    }
+  }
+  rows += '</tr>';
+});
+document.getElementById('cohortTable').innerHTML = `<thead>${thead}</thead><tbody>${rows}</tbody>`;
+
+// ─── TRANSACTIONS ─────────────────────────────────────
+const txData = [
+  { icon: '💳', name: 'Loja Natura', meta: 'Cartão virtual · há 2 min', amount: '+R$890,00', status: 'Aprovado', statusColor: '#00e5a0', statusBg: 'rgba(0,229,160,0.1)', iconBg: 'rgba(0,229,160,0.12)' },
+  { icon: '🔄', name: 'TED Saída', meta: 'Para Banco XYZ · há 8 min', amount: '−R$4.500,00', status: 'Processando', statusColor: '#ffc93c', statusBg: 'rgba(255,201,60,0.1)', iconBg: 'rgba(255,201,60,0.12)' },
+  { icon: '📱', name: 'Recarga Claro', meta: 'Número terminado em 77 · há 15 min', amount: '−R$45,00', status: 'Aprovado', statusColor: '#00e5a0', statusBg: 'rgba(0,229,160,0.1)', iconBg: 'rgba(124,106,255,0.12)' },
+  { icon: '🏦', name: 'PIX Recebido', meta: 'Marcos A. · há 22 min', amount: '+R$1.200,00', status: 'Aprovado', statusColor: '#00e5a0', statusBg: 'rgba(0,229,160,0.1)', iconBg: 'rgba(0,229,160,0.12)' },
+  { icon: '⚠️', name: 'Tentativa suspeita', meta: 'IP: 192.168.xx.xx · há 30 min', amount: 'R$9.999,99', status: 'Bloqueado', statusColor: '#ff5c5c', statusBg: 'rgba(255,92,92,0.1)', iconBg: 'rgba(255,92,92,0.12)' },
+];
+
+const txList = document.getElementById('txList');
+txData.forEach(tx => {
+  txList.innerHTML += `
+    <div class="tx-item">
+      <div class="tx-icon" style="background:${tx.iconBg}">${tx.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${tx.name}</div>
+        <div class="tx-meta">${tx.meta}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div class="tx-amount" style="color:${tx.amount.startsWith('+') ? '#00e5a0' : tx.amount.startsWith('−') ? '#ff5c5c' : '#f0f0f8'}">${tx.amount}</div>
+        <span class="tx-status" style="color:${tx.statusColor};background:${tx.statusBg}">${tx.status}</span>
+      </div>
+    </div>`;
+});
+</script>
+</body>
+</html>
