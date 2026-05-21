@@ -1,8 +1,5 @@
 <div align="center">
 
-<img src="./preview.png" width="100%" alt="FlowPay Dashboard Preview"/>
-
-<br>
 <br>
 
 <h1>FlowPay — Executive Operations Dashboard</h1>
@@ -25,7 +22,7 @@ com foco em métricas estratégicas de crescimento, retenção e receita.
 
 ---
 
-#  Sobre o Projeto
+# Sobre o Projeto
 
 O **FlowPay Dashboard** foi desenvolvido para simular um ambiente analítico corporativo utilizado por fintechs modernas e empresas SaaS orientadas a métricas.
 
@@ -39,41 +36,53 @@ O projeto combina:
 
 ---
 
-#  Métricas Monitoradas
+# Métricas Monitoradas
 
 <table>
 <tr>
-<td> MRR</td>
-<td> Clientes Ativos</td>
-<td> Churn Rate</td>
+<td>MRR</td>
+<td>Clientes Ativos</td>
+<td>Churn Rate</td>
 </tr>
 
 <tr>
-<td> NPS</td>
-<td> LTV / CAC</td>
-<td> Revenue Analytics</td>
+<td>NPS</td>
+<td>LTV / CAC</td>
+<td>Revenue Analytics</td>
 </tr>
 
 <tr>
-<td> Cohort Analysis</td>
-<td> Funnel Conversion</td>
-<td> Live Transactions</td>
+<td>Cohort Analysis</td>
+<td>Funnel Conversion</td>
+<td>Live Transactions</td>
 </tr>
 </table>
 
 ---
 
-#  Preview
+# Preview
 
 <div align="center">
 
+<table>
+<tr>
+
+<td width="50%">
 <img src="./preview.png" width="100%" alt="Dashboard Preview"/>
+</td>
+
+<td width="50%">
+<img src="./preview2.png" width="100%" alt="Dashboard Analytics"/>
+</td>
+
+</tr>
+</table>
 
 </div>
 
 ---
 
-#  Funcionalidades
+# Funcionalidades
 
 ### Executive Overview
 Painel estratégico consolidando indicadores de negócio.
@@ -95,7 +104,7 @@ Comparação de retenção entre canais de aquisição.
 
 ---
 
-#  Tecnologias
+# Tecnologias
 
 ```txt
 HTML5
@@ -106,19 +115,20 @@ Chart.js
 
 ---
 
-#  Estrutura do Projeto
+# Estrutura do Projeto
 
 ```bash
 flowpay-executive-dashboard/
 │
 ├── index.html
 ├── preview.png
+├── preview2.png
 └── README.md
 ```
 
 ---
 
-#  Como Executar
+# Como Executar
 
 ### Clone o repositório
 
@@ -136,7 +146,7 @@ Ou utilize a extensão **Live Server** no VS Code.
 
 ---
 
-#  Objetivo
+# Objetivo
 
 Este projeto foi desenvolvido como estudo de:
 
@@ -148,7 +158,7 @@ Este projeto foi desenvolvido como estudo de:
 
 ---
 
-#  Roadmap
+# Roadmap
 
 - [ ] Backend em Python
 - [ ] Integração com API
@@ -160,12 +170,20 @@ Este projeto foi desenvolvido como estudo de:
 
 ---
 
-#  Autor
+# Autor
 
 <div align="center">
 
-### Vitória Ranieri
+<img height="1" width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:2D2D2D,50:FFFFFF,100:2D2D2D&height=120&section=header&text=&fontSize=0"/>
 
+<h3>Vitória Ranieri</h3>
+
+<p>
+<i>
 Data • Analytics • Business Intelligence
+</i>
+</p>
+
+<img src="https://readme-typing-svg.demolab.com?font=Inter&weight=500&size=14&duration=4000&pause=1000&color=CFCFCF&center=true&vCenter=true&width=435&lines=Executive+Dashboards;Business+Analytics;Data+Storytelling;Enterprise+Metrics" />
 
 </div>
